@@ -1,11 +1,12 @@
 import { Anthropic } from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { NextResponse } from 'next/server';
 
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const gemini = new GoogleGenerativeAI(process.env.GEMINI_API_KEY ?? '');
 
 class EngineeringCounsel {
   constructor(
@@ -110,3 +111,32 @@ export async function POST(request: Request) {
     const reviews = [];
     for (const [key, member] of Object.entries(boardMembers)) {
       if (key === 'proposer') continue;
+
+      const review = await member.ask(
+        `Design problem:\n${problem}\n\nProposed solution:\n${proposal}\n\nReview this proposal from your discipline's perspective.`
+      );
+
+      reviews.push({
+        engineer: member.name,
+        discipline: member.discipline,
+        review,
+      });
+    }
+
+    const reviewSummary = reviews
+      .map((r) => `${r.engineer} (${r.discipline}):\n${r.review}`)
+      .join('\n\n');
+
+    const synthesis = await boardMembers.proposer.ask(
+      `Here is your original proposal:\n${proposal}\n\nHere is feedback from the engineering review board:\n\n${reviewSummary}\n\nSynthesize this feedback into a final recommendation. Address the most critical risks raised and state clearly whether the proposal should proceed as-is, be revised, or be rejected.`
+    );
+
+    return NextResponse.json({ proposal, reviews, synthesis });
+  } catch (error) {
+    console.error('Review error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
+  }
+}
