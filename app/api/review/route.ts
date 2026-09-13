@@ -24,7 +24,7 @@ class EngineeringCounsel {
       ];
 
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: 'claude-sonnet-5',
         max_tokens: 1200,
         system: this.systemPrompt,
         messages,
@@ -33,7 +33,7 @@ class EngineeringCounsel {
       return response.content[0].type === 'text' ? response.content[0].text : '';
     } else {
       const model = gemini.getGenerativeModel({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-3.6-flash',
         systemInstruction: this.systemPrompt,
       });
 
