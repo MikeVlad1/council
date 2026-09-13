@@ -108,20 +108,17 @@ export async function POST(request: Request) {
 
     const proposal = await boardMembers.proposer.ask(problem);
 
-    const reviews = [];
-    for (const [key, member] of Object.entries(boardMembers)) {
-      if (key === 'proposer') continue;
+    const reviewers = Object.entries(boardMembers).filter(([key]) => key !== 'proposer');
 
-      const review = await member.ask(
-        `Design problem:\n${problem}\n\nProposed solution:\n${proposal}\n\nReview this proposal from your discipline's perspective.`
-      );
-
-      reviews.push({
+    const reviews = await Promise.all(
+      reviewers.map(async ([, member]) => ({
         engineer: member.name,
         discipline: member.discipline,
-        review,
-      });
-    }
+        review: await member.ask(
+          `Design problem:\n${problem}\n\nProposed solution:\n${proposal}\n\nReview this proposal from your discipline's perspective.`
+        ),
+      }))
+    );
 
     const reviewSummary = reviews
       .map((r) => `${r.engineer} (${r.discipline}):\n${r.review}`)
